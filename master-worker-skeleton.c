@@ -61,7 +61,7 @@ void *consume_requests_loop(void *data)
     }
 
     curr_item = buffer[curr_buf_size--];
-    print_consumed(item_to_produce, thread_id);
+    print_consumed(curr_item, thread_id);
   }
 }
 
