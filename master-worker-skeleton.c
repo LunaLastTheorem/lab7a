@@ -9,6 +9,7 @@
 
 int item_to_produce, curr_buf_size;
 int total_items, max_buf_size, num_workers, num_masters;
+pthread_mutex_t *lock;
 
 int *buffer;
 
@@ -38,25 +39,32 @@ void *generate_requests_loop(void *data)
       break;
     }
 
-    buffer[curr_buf_size++] = item_to_produce;
+    curr_buf_size++;
+    buffer[curr_buf_size] = item_to_produce;
     print_produced(item_to_produce, thread_id);
     item_to_produce++;
   }
   return 0;
 }
 
+// write function to be run by worker threads
+// ensure that the workers call the function print_consumed when they consume an item
 void *consume_requests_loop(void *data)
 {
   int thread_id = *((int *)data);
+  int curr_item;
 
   while (1)
   {
-    // TODO implement
+    if(curr_buf_size <= 0){
+      break;
+    }
+
+    curr_buf_size--;
+    curr_item = buffer[curr_buf_size];
+    print_consumed(item_to_produce, thread_id);
   }
 }
-
-// write function to be run by worker threads
-// ensure that the workers call the function print_consumed when they consume an item
 
 int main(int argc, char *argv[])
 {
@@ -99,14 +107,10 @@ int main(int argc, char *argv[])
   worker_thread = (pthread_t *)malloc(sizeof(pthread_t) * num_workers);
 
   for (i = 0; i < num_workers; i++)
-  {
     worker_thread_id[i] = i;
-  }
 
   for (i = 0; i < num_workers; i++)
-  {
-    pthread_create(&worker_thread[i], NULL, generate_requests_loop, (void *)&worker_thread_id[i]);
-  }
+    pthread_create(&worker_thread[i], NULL, consume_requests_loop, (void *)&worker_thread_id[i]);
 
   // wait for all threads to complete
   for (i = 0; i < num_masters; i++)
@@ -118,7 +122,7 @@ int main(int argc, char *argv[])
   for (i = 0; i < num_workers; i++)
   {
     pthread_join(worker_thread[i], NULL);
-    printf("master %d joined\n", i);
+    printf("worker %d joined\n", i);
   }
 
   /*----Deallocating Buffers---------------------*/
