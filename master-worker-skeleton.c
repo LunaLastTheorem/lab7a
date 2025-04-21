@@ -39,8 +39,7 @@ void *generate_requests_loop(void *data)
       break;
     }
 
-    curr_buf_size++;
-    buffer[curr_buf_size] = item_to_produce;
+    buffer[curr_buf_size++] = item_to_produce;
     print_produced(item_to_produce, thread_id);
     item_to_produce++;
   }
@@ -56,12 +55,12 @@ void *consume_requests_loop(void *data)
 
   while (1)
   {
-    if(curr_buf_size <= 0){
+    if (curr_buf_size <= 0)
+    {
       break;
     }
 
-    curr_buf_size--;
-    curr_item = buffer[curr_buf_size];
+    curr_item = buffer[curr_buf_size--];
     print_consumed(item_to_produce, thread_id);
   }
 }
