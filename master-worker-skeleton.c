@@ -48,6 +48,7 @@ void *generate_requests_loop(void *data)
     if (item_to_produce >= total_items) // done producing all items
     {
       pthread_mutex_unlock(&lock);
+      pthread_cond_signal(&can_consume); // signal we are done producing, so if there is remaining consumers not woken, they shall awake
       break;
     }
 
