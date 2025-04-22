@@ -9,9 +9,13 @@
 
 int item_to_produce, curr_buf_size;
 int total_items, max_buf_size, num_workers, num_masters;
-pthread_mutex_t *lock;
 
 int *buffer;
+
+
+pthread_mutex_t *lock;
+pthread_cond_t can_produce;
+pthread_cond_t can_consume;
 
 void print_produced(int num, int master)
 {
@@ -39,9 +43,9 @@ void *generate_requests_loop(void *data)
       break;
     }
 
-    buffer[curr_buf_size++] = item_to_produce;
+    buffer[curr_buf_size++] = item_to_produce; //!  must be thread safe
     print_produced(item_to_produce, thread_id);
-    item_to_produce++;
+    item_to_produce++; //!  must be thread safe
   }
   return 0;
 }
@@ -60,7 +64,7 @@ void *consume_requests_loop(void *data)
       break;
     }
 
-    curr_item = buffer[curr_buf_size--];
+    curr_item = buffer[curr_buf_size--]; //!  must be thread safe
     print_consumed(curr_item, thread_id);
   }
 }
@@ -69,11 +73,17 @@ int main(int argc, char *argv[])
 {
   int *master_thread_id;
   pthread_t *master_thread;
+
   item_to_produce = 0;
   curr_buf_size = 0;
 
   int *worker_thread_id;
   pthread_t *worker_thread;
+
+  //initialize locks
+  pthread_mutex_init(&lock, NULL);
+  pthread_cond_init(&can_consume, NULL);
+  pthread_cond_init(&can_produce, NULL);
 
   int i;
 
