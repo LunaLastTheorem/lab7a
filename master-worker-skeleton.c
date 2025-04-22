@@ -25,7 +25,7 @@ void print_produced(int num, int master)
 void print_consumed(int num, int worker)
 {
 
-  printf("Consumed %d by worker %d\n", num, worker);
+  printf("*Consumed %d by worker %d\n", num, worker);
 }
 
 // produce items and place in buffer
@@ -85,7 +85,8 @@ void *consume_requests_loop(void *data)
       break;
     }
 
-    curr_item = buffer[curr_buf_size--]; //!  must be thread safe
+    curr_buf_size = curr_buf_size - 1;
+    curr_item = buffer[curr_buf_size]; //!  must be thread safe
     print_consumed(curr_item, thread_id);
 
     pthread_cond_signal(&can_produce); // announce to producers that they can produce again
