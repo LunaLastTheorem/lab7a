@@ -12,8 +12,7 @@ int total_items, max_buf_size, num_workers, num_masters;
 
 int *buffer;
 
-
-pthread_mutex_t *lock;
+pthread_mutex_t lock;
 pthread_cond_t can_produce;
 pthread_cond_t can_consume;
 
@@ -37,15 +36,27 @@ void *generate_requests_loop(void *data)
 
   while (1)
   {
+    pthread_mutex_lock(&lock);
 
-    if (item_to_produce >= total_items)
+    // while we are not done producing but we exceeded the size of buffer, we shall wait
+    // short circuits when we exceed buffer
+    while (curr_buf_size == max_buf_size && item_to_produce < total_items)
     {
+      pthread_cond_wait(&can_produce, &lock);
+    }
+
+    if (item_to_produce >= total_items) // done producing all items
+    {
+      pthread_mutex_unlock(&lock);
       break;
     }
 
     buffer[curr_buf_size++] = item_to_produce; //!  must be thread safe
     print_produced(item_to_produce, thread_id);
     item_to_produce++; //!  must be thread safe
+
+    pthread_cond_signal(&can_consume); // announce to consumers that there is stuff in the buffer to consume
+    pthread_mutex_unlock(&lock);
   }
   return 0;
 }
@@ -59,14 +70,28 @@ void *consume_requests_loop(void *data)
 
   while (1)
   {
-    if (curr_buf_size <= 0)
+    pthread_mutex_lock(&lock);
+
+    // while we got nothing to consume and we are not done producing items
+    // short circuits when there is something new to consume
+    while (curr_buf_size == 0 && item_to_produce < total_items)
     {
+      pthread_cond_wait(&can_consume, &lock);
+    }
+
+    if (curr_buf_size == 0 && item_to_produce >= total_items) // done consuming everything that needed to be consumed
+    {
+      pthread_mutex_unlock(&lock);
       break;
     }
 
     curr_item = buffer[curr_buf_size--]; //!  must be thread safe
     print_consumed(curr_item, thread_id);
+
+    pthread_cond_signal(&can_produce); // announce to producers that they can produce again
+    pthread_mutex_unlock(&lock);
   }
+  return 0;
 }
 
 int main(int argc, char *argv[])
@@ -80,7 +105,7 @@ int main(int argc, char *argv[])
   int *worker_thread_id;
   pthread_t *worker_thread;
 
-  //initialize locks
+  // initialize locks
   pthread_mutex_init(&lock, NULL);
   pthread_cond_init(&can_consume, NULL);
   pthread_cond_init(&can_produce, NULL);
@@ -134,12 +159,16 @@ int main(int argc, char *argv[])
     printf("worker %d joined\n", i);
   }
 
+  printf("done\n");
   /*----Deallocating Buffers---------------------*/
+  pthread_mutex_destroy(&lock);
   free(buffer);
-  free(master_thread_id);
+
   free(master_thread);
-  free(worker_thread_id);
+  free(master_thread_id);
+
   free(worker_thread);
+  free(worker_thread_id);
 
   return 0;
 }
