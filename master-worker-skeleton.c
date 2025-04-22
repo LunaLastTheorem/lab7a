@@ -83,6 +83,7 @@ void *consume_requests_loop(void *data)
     if (curr_buf_size == 0 && item_to_produce >= total_items) // done consuming everything that needed to be consumed
     {
       pthread_mutex_unlock(&lock);
+      pthread_cond_signal(&can_consume); // wake up other consumer threads that there is nothing else to consume
       break;
     }
 
