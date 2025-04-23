@@ -25,7 +25,7 @@ void print_produced(int num, int master)
 void print_consumed(int num, int worker)
 {
 
-  printf("*Consumed %d by worker %d\n", num, worker);
+  printf("Consumed %d by worker %d\n", num, worker);
 }
 
 // produce items and place in buffer
@@ -49,6 +49,7 @@ void *generate_requests_loop(void *data)
     {
       pthread_mutex_unlock(&lock);
       pthread_cond_signal(&can_consume); // signal we are done producing, so if there is remaining consumers not woken, they shall awake
+      pthread_cond_signal(&can_produce); //sginal other producers that we are done
       break;
     }
 
@@ -162,7 +163,6 @@ int main(int argc, char *argv[])
     printf("worker %d joined\n", i);
   }
 
-  printf("done\n");
   /*----Deallocating Buffers---------------------*/
   pthread_mutex_destroy(&lock);
   free(buffer);
